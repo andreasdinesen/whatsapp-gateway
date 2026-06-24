@@ -14,6 +14,7 @@ Pakket som [yggdrasil](https://github.com/kristianwind/yggdrasil)-rune.
 |-----------|-------------|
 | `POST /send` | Send en besked. Body: `{"to": "<nummer eller gruppe-id>", "message": "<tekst>"}` |
 | `GET /qr`  | Vis QR-kode til første login + forbindelsesstatus |
+| `GET /groups` | List grupper kontoen er med i (navn + `@g.us`-id) — så du kan finde gruppe-id'et til Tilmeld. Auth som `/send`; i browser: `/groups?key=<API_KEY>` |
 | `GET /health` | `200 OK` + JSON-status |
 
 ### `POST /send`

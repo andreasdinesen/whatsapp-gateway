@@ -144,9 +144,10 @@ app.use(express.json({ limit: '1mb' }));
 
 function requireAuth(req, res, next) {
   if (!API_KEY) return next(); // ingen nøgle konfigureret -> åben
-  const header = req.get('authorization') || '';
-  const expected = `Bearer ${API_KEY}`;
-  if (header !== expected) {
+  // Accepter enten Authorization-header (Tilmeld) eller ?key= (nem browser-adgang).
+  const headerOk = (req.get('authorization') || '') === `Bearer ${API_KEY}`;
+  const queryOk = req.query.key === API_KEY;
+  if (!headerOk && !queryOk) {
     return res.status(401).json({ ok: false, error: 'unauthorized' });
   }
   next();
@@ -210,6 +211,46 @@ app.post('/send', requireAuth, async (req, res) => {
     console.error(`[send] -> ${jid}: FEJL`, e?.message || e);
     return res.status(502).json({ ok: false, error: e?.message || 'send fejlede' });
   }
+});
+
+// Hjælpe-endpoint: list de grupper kontoen er med i, så man kan finde gruppe-id'et
+// (@g.us) der skal sættes som "to" i Tilmeld. Åbn i browser: /groups?key=<API_KEY>
+app.get('/groups', requireAuth, async (req, res) => {
+  if (connStatus !== 'open' || !sock) {
+    return res.status(503).json({ ok: false, error: 'ikke forbundet til WhatsApp — scan QR på /qr' });
+  }
+  let list;
+  try {
+    const groups = await sock.groupFetchAllParticipating();
+    list = Object.values(groups)
+      .map((g) => ({ id: g.id, name: g.subject || '(uden navn)', participants: (g.participants || []).length }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'da'));
+  } catch (e) {
+    console.error('[groups] FEJL', e?.message || e);
+    return res.status(502).json({ ok: false, error: e?.message || 'kunne ikke hente grupper' });
+  }
+
+  if (req.accepts(['json', 'html']) === 'html') {
+    const rows = list
+      .map(
+        (g) =>
+          `<tr><td>${g.name}</td><td><code>${g.id}</code></td><td>${g.participants}</td></tr>`
+      )
+      .join('');
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    return res.send(`<!doctype html><html lang="da"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhatsApp Gateway — grupper</title>
+<style>body{font-family:system-ui,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem}
+table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:.5rem .6rem;text-align:left}
+th{background:#f4f4f4}code{background:#f4f4f4;padding:.1rem .3rem;border-radius:4px}.muted{color:#666}</style></head>
+<body><h1>Grupper (${list.length})</h1>
+<p class="muted">Kopiér <code>id</code>'et (slutter på <code>@g.us</code>) og brug det som <code>to</code> i Tilmeld.</p>
+<table><thead><tr><th>Navn</th><th>Gruppe-id (to)</th><th>Deltagere</th></tr></thead>
+<tbody>${rows || '<tr><td colspan="3" class="muted">Ingen grupper fundet</td></tr>'}</tbody></table>
+</body></html>`);
+  }
+  res.json({ ok: true, count: list.length, groups: list });
 });
 
 app.listen(PORT, () => {

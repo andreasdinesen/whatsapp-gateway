@@ -2,9 +2,9 @@ gameskill:
   id: whatsapp-gateway
   name: "WhatsApp Gateway"
   category: "Apps"
-  description: "WhatsApp-bro (Baileys): POST /send {to, message}. Til notifikationer fra fx Tilmeld. Scan QR på /qr ved første login."
+  description: "WhatsApp-bro (Baileys): POST /send {to, message}. Til notifikationer fra fx Tilmeld. Scan QR på /qr ved første login. Find gruppe-id'er på /groups."
   author: "andreasdinesen"
-  version: 1
+  version: 2
   icon: "app"
 
   docker:
