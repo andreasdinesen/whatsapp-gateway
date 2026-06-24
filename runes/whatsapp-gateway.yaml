@@ -1,0 +1,39 @@
+gameskill:
+  id: whatsapp-gateway
+  name: "WhatsApp Gateway"
+  category: "Apps"
+  description: "WhatsApp-bro (Baileys): POST /send {to, message}. Til notifikationer fra fx Tilmeld. Scan QR på /qr ved første login."
+  author: "andreasdinesen"
+  version: 1
+  icon: "app"
+
+  docker:
+    image: "ghcr.io/andreasdinesen/whatsapp-gateway:latest"
+    keep_entrypoint: true
+    data_path: "/data"
+
+  install:
+    image: "ghcr.io/andreasdinesen/whatsapp-gateway:latest"
+    script: |
+      mkdir -p /data
+      echo "Klar. Tryk Start, og scan QR på /qr ved første login."
+
+  variables:
+    - key: API_KEY
+      name: "API-nøgle (kræves i Authorization: Bearer). Lad stå tom for åben adgang."
+      type: string
+      default: ""
+    - key: PORT
+      name: "Port"
+      type: int
+      default: 8080
+
+  startup:
+    command: ""
+    done_regex: 'listening on port'
+
+  ports:
+    - { name: web, default: 8080, protocol: tcp }
+
+  backup:
+    include: ["."]
