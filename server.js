@@ -61,6 +61,21 @@ let connStatus = 'starting'; // starting | qr | open | close
 let latestQR = null; // rå QR-streng til /qr
 let meId = null; // eget nummer/JID når forbundet
 
+// Lille lager over afsendte beskeder. Når en modtager-enhed ikke kan dekryptere
+// en besked, sender den en "retry receipt" og beder os sende igen; uden dette
+// lager kan vi ikke svare, og beskeden hænger på "Venter på denne besked".
+const SENT_CACHE_MAX = 1000;
+const sentMessages = new Map(); // key.id -> message (proto)
+
+function rememberMessage(id, message) {
+  if (!id || !message) return;
+  sentMessages.set(id, message);
+  if (sentMessages.size > SENT_CACHE_MAX) {
+    // smid den ældste ud (Map bevarer indsættelsesrækkefølge)
+    sentMessages.delete(sentMessages.keys().next().value);
+  }
+}
+
 async function startSock() {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion();
@@ -71,6 +86,8 @@ async function startSock() {
     logger: pino({ level: 'silent' }),
     browser: ['WhatsApp Gateway', 'Chrome', '1.0.0'],
     syncFullHistory: false,
+    // Bruges til at gen-sende en besked når en modtager-enhed beder om retry.
+    getMessage: async (key) => sentMessages.get(key.id) || undefined,
   });
 
   sock.ev.on('creds.update', saveCreds);
@@ -205,6 +222,7 @@ app.post('/send', requireAuth, async (req, res) => {
   }
   try {
     const result = await sock.sendMessage(jid, { text: message });
+    rememberMessage(result?.key?.id, result?.message); // muliggør retry-svar
     console.log(`[send] -> ${jid}: ok (id ${result?.key?.id})`);
     return res.status(200).json({ ok: true, to: jid, id: result?.key?.id });
   } catch (e) {

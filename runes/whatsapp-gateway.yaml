@@ -4,7 +4,7 @@ gameskill:
   category: "Apps"
   description: "WhatsApp-bro (Baileys): POST /send {to, message}. Til notifikationer fra fx Tilmeld. Scan QR på /qr ved første login. Find gruppe-id'er på /groups."
   author: "andreasdinesen"
-  version: 2
+  version: 3
   icon: "app"
 
   docker:
