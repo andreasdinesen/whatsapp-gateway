@@ -22,12 +22,27 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # Runens version bliver ogsaa et image-tag (v<version>), saa en installation
+      # kan laases eller rulles tilbage via IMAGE_TAG-variablen i panelet.
+      - name: Laes rune-version
+        id: rune
+        run: |
+          v=$(sed -n 's/^  version: *//p' runes/whatsapp-gateway.yaml | head -1 | tr -d '"'"'"' ')
+          case "$v" in
+            ''|*[!0-9]*)
+              echo "Kunne ikke laese en rune-version af runes/whatsapp-gateway.yaml (fik '$v')." >&2
+              echo "Uden den ville vi udgive et tag der hed 'v' - stopper hellere her." >&2
+              exit 1 ;;
+          esac
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Rune-version: $v  ->  tag v$v"
       - id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=v${{ steps.rune.outputs.version }},enable={{is_default_branch}}
             type=semver,pattern={{version}}
       - uses: docker/build-push-action@v6
         with:

@@ -89,6 +89,49 @@ Installér i yggdrasil via **Browse runes on GitHub**:
 
 → Install → Start → åbn `/qr` → scan → `/send` virker.
 
+Ud over `API_KEY` og `PORT` har runen feltet `IMAGE_TAG` (standard `latest`) — se
+nedenfor.
+
+### Opdatering
+
+Panelet har to trin, og de henter hver sin ting:
+
+1. **Runes → Browse GitHub → Reload** henter kun rune-definitionen (YAML'en) —
+   nye felter og den nye version i listen. Imaget røres ikke.
+2. **Restart** eller **Settings → Update/Reinstall** henter imaget. Panelet laver
+   `docker pull` på image-tagget, hver gang containeren skabes på ny — med
+   `IMAGE_TAG=latest` er hver Restart altså også en opdatering. **Reinstall** er
+   desuden det trin, der lægger runens standard-overvågning (se nedenfor) ind på en
+   eksisterende server.
+
+WhatsApp-sessionen i `/data` overlever begge trin — der skal ikke scannes igen.
+
+**Lås versionen:** Hvert push til `main` udgiver imaget som både `latest` og
+`v<rune-version>`. Sæt `IMAGE_TAG` til fx `v5` for at blive på runens version 5 —
+eller for at rulle tilbage, hvis en udgivelse driller — og tryk Restart.
+Versions-taggene findes fra den udgivelse, der indførte feltet; ældre versioner findes
+kun som `latest`.
+
+### Overvågning
+
+Runen giver tre log-watchers, der sender en notifikation i panelet:
+
+| Watcher | Linje i loggen | Betyder |
+|---------|----------------|---------|
+| WhatsApp-forbindelsen er gået i stå | `[whatsapp] reconnect-fejl` / `start-fejl` | Forbindelsen kunne ikke genoprettes, og der forsøges ikke igen — **Restart** serveren |
+| WhatsApp logget ud | `[whatsapp] Forbindelse lukket … Logget ud` | Sessionen er ugyldig; scan `/qr` igen |
+| Beskeder kunne ikke sendes | `[send] afvist …` / `[send] -> …: FEJL` / `[groups] FEJL` | En notifikation kom ikke ud |
+
+Almindelige `Forbindelse lukket … Genopretter...`-linjer udløser ingenting — WhatsApp
+lukker forbindelsen jævnligt, og gatewayen forbinder selv igen.
+
+### Wipe = log ud
+
+**Wipe** sletter `auth/` — WhatsApp-sessionen. Ved næste start viser gatewayen en ny
+QR-kode, og `/qr` skal scannes igen, før der kan sendes. Brug den, når sessionen er i
+stykker. Den gamle enhed står stadig under *Tilknyttede enheder* på telefonen, til du
+fjerner den dér. Panelet tilbyder en backup først. Planlæg aldrig en wipe.
+
 ## Kobl til Tilmeld
 
 I Tilmeld under **master → Opsætning → WhatsApp**:

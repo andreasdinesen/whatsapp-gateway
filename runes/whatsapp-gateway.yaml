@@ -4,21 +4,33 @@ gameskill:
   category: "Apps"
   description: "WhatsApp-bro (Baileys): POST /send {to, message}. Til notifikationer fra fx Tilmeld. Scan QR på /qr ved første login. Find gruppe-id'er på /groups."
   author: "andreasdinesen"
-  version: 4
+  version: 5
   icon: "app"
 
   docker:
-    image: "ghcr.io/andreasdinesen/whatsapp-gateway:latest"
+    image: "ghcr.io/andreasdinesen/whatsapp-gateway:{{IMAGE_TAG}}"
     keep_entrypoint: true
     data_path: "/data"
 
   install:
-    image: "ghcr.io/andreasdinesen/whatsapp-gateway:latest"
+    image: "ghcr.io/andreasdinesen/whatsapp-gateway:{{IMAGE_TAG}}"
     script: |
       mkdir -p /data
       echo "Klar. Tryk Start, og scan QR paa /qr ved foerste login."
 
   variables:
+    # Goer image-versionen til et felt i panelet: "latest" foelger med hver
+    # udgivelse, "v5" laaser gatewayen til runens version 5. Panelet henter imaget
+    # (docker pull) ved hver Start/Restart, saa med latest er hver Restart ogsaa en
+    # opdatering - laas, hvis det ikke maa ske. docker.image og install.image SKAL
+    # bruge samme tag. Versions-taggene findes fra den udgivelse, der indfoerte
+    # feltet; aeldre versioner findes kun som latest.
+    - key: IMAGE_TAG
+      name: "Image-version: latest (foelger nyeste) eller fx v5 for at laase/rulle tilbage"
+      type: string
+      default: "latest"
+      pattern: '^(latest|v[0-9]+)$'
+      hint: "Skriv latest eller et versionsnummer som v5 (runens version)"
     - key: API_KEY
       name: "API-nøgle (kræves i Authorization: Bearer). Lad stå tom for åben adgang."
       type: string
@@ -34,6 +46,40 @@ gameskill:
 
   ports:
     - { name: web, default: 8080, protocol: tcp }
+
+  # Standard-overvaagning (Kvasir-watchers). Laegges ind ved oprettelse og ved
+  # Reinstall - en eksisterende server faar dem foerst efter en Reinstall.
+  # Moenstrene er de linjer, server.js selv skriver. "Forbindelse lukket ...
+  # Genopretter" er IKKE med: WhatsApp lukker forbindelsen jaevnligt, og en
+  # QR-kode, der ikke bliver scannet, udloeber med samme linje.
+  watchers:
+    # startSock() fejlede (fx intet net ved opstart). Der er ingen ny retry
+    # efter denne linje - gatewayen sender intet, foer serveren genstartes.
+    - name: "WhatsApp-forbindelsen er gaaet i staa"
+      pattern: '\[whatsapp\] (reconnect|start)-fejl'
+      threshold: 1
+      window_secs: 300
+    # Sessionen er ugyldig (logget ud paa telefonen). Gatewayen rydder den selv
+    # og viser en ny QR-kode - nogen skal scanne /qr igen.
+    - name: "WhatsApp logget ud - scan QR igen"
+      pattern: '\[whatsapp\] Forbindelse lukket .*Logget ud'
+      threshold: 1
+      window_secs: 300
+    # Hver linje er en notifikation, der IKKE blev sendt.
+    - name: "Beskeder kunne ikke sendes"
+      pattern: '\[send\] (afvist|-> .*: FEJL)|\[groups\] FEJL'
+      threshold: 1
+      window_secs: 300
+
+  # Wipe = LOG GATEWAYEN UD. auth/ er WhatsApp-sessionen; slettes den, viser
+  # gatewayen en ny QR-kode ved opstart, og /qr skal scannes igen, foer der kan
+  # sendes. Brug den, naar sessionen er i stykker (beskeder fejler, eller den
+  # gamle enhed er fjernet paa telefonen). Den gamle "tilknyttede enhed" bliver
+  # staaende paa telefonen, til du fjerner den der. Planlaeg den aldrig.
+  # backup_first er dokumentation: panelet spoerger selv ved hver wipe.
+  wipe:
+    paths: ["auth"]
+    backup_first: true
 
   backup:
     include: ["."]
