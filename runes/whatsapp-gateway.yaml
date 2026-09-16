@@ -4,7 +4,7 @@ gameskill:
   category: "Apps"
   description: "WhatsApp-bro (Baileys): POST /send {to, message}. Til notifikationer fra fx Tilmeld. Scan QR på /qr ved første login. Find gruppe-id'er på /groups."
   author: "andreasdinesen"
-  version: 3
+  version: 4
   icon: "app"
 
   docker:
@@ -16,7 +16,7 @@ gameskill:
     image: "ghcr.io/andreasdinesen/whatsapp-gateway:latest"
     script: |
       mkdir -p /data
-      echo "Klar. Tryk Start, og scan QR på /qr ved første login."
+      echo "Klar. Tryk Start, og scan QR paa /qr ved foerste login."
 
   variables:
     - key: API_KEY
