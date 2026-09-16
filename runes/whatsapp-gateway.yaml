@@ -4,7 +4,7 @@ gameskill:
   category: "Apps"
   description: "WhatsApp-bro (Baileys): POST /send {to, message}. Til notifikationer fra fx Tilmeld. Scan QR på /qr ved første login. Find gruppe-id'er på /groups."
   author: "andreasdinesen"
-  version: 5
+  version: 6
   icon: "app"
 
   docker:
@@ -25,9 +25,23 @@ gameskill:
     # opdatering - laas, hvis det ikke maa ske. docker.image og install.image SKAL
     # bruge samme tag. Versions-taggene findes fra den udgivelse, der indfoerte
     # feltet; aeldre versioner findes kun som latest.
+    #
+    # Feltet maa ALDRIG staa tomt - panelet bruger IKKE default for en tom vaerdi
+    # (yggdrasil @ddcf9d2; rune-schema.md:348/:388 lover det, koden goer det ikke):
+    #  1. validateVar returnerer ok paa "" (internal/api/env_validate.go:61-63)
+    #     FOER type- og pattern-tjekket (:65-113), saa moenstret afviser aldrig "".
+    #  2. `required` haandhaeves ikke server-side (samme fil :57-60); det giver kun
+    #     stjernen i formularen (web/src/components/VarForm.svelte:41).
+    #  3. "" gemmes og vinder over default (create: handlers_servers.go:324-327,
+    #     start/install: handlers_query_rcon.go:50-51), saa imaget bliver "...:"
+    #     og pull/create fejler (handlers_servers.go:828-887, install.go:150-198).
+    #     Install-scriptet koerer i samme image og naar aldrig at melde fejlen.
+    # Derfor required (stjerne) og "aldrig tomt" i feltnavnet. Staar feltet tomt:
+    # skriv latest, gem og tryk Restart.
     - key: IMAGE_TAG
-      name: "Image-version: latest (foelger nyeste) eller fx v5 for at laase/rulle tilbage"
+      name: "Image-version: latest (foelger nyeste) eller fx v5 for at laase/rulle tilbage - aldrig tomt, skriv latest hvis i tvivl"
       type: string
+      required: true
       default: "latest"
       pattern: '^(latest|v[0-9]+)$'
       hint: "Skriv latest eller et versionsnummer som v5 (runens version)"

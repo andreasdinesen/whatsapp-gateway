@@ -112,6 +112,10 @@ eller for at rulle tilbage, hvis en udgivelse driller — og tryk Restart.
 Versions-taggene findes fra den udgivelse, der indførte feltet; ældre versioner findes
 kun som `latest`.
 
+**Tomt felt:** `IMAGE_TAG` må aldrig stå tomt. Panelet bruger ikke standardværdien for et
+tomt felt, men gemmer det tomme, så image-adressen ender på `:` og hverken install eller
+Start kan hente imaget. Står feltet tomt, så skriv `latest`, gem og tryk Restart.
+
 ### Overvågning
 
 Runen giver tre log-watchers, der sender en notifikation i panelet:
